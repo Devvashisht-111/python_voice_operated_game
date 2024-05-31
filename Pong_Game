@@ -1,0 +1,126 @@
+import pygame
+import random
+import whisper
+from asr_whisper import asr_whisper
+
+def your_score(score):
+    value = score_font.render("Your Score: " + str(score), True, blue)
+    dis.blit(value, [0, 0])
+
+def message(msg, color):
+    mesg = font_style.render(msg, True, color)
+    dis.blit(mesg, (dis_width / 6, dis_height / 3))
+
+def game_loop(asr_model):
+    game_over = False
+    game_close = False
+    paddle_width = 10
+    paddle_height = 60
+    paddle_speed = 40
+    paddle_x = 20
+    paddle_y = (dis_height - paddle_height) // 2
+    ball_size = 20
+    ball_speed_x = -90 # Move the ball towards the left
+    ball_speed_y = 40
+    ball_x = dis_width - ball_size - 20 # Start the ball from the right side
+    ball_y = dis_height // 2
+    score = 0
+
+    while not game_over:
+        text = asr_whisper(asr_model)
+        
+        while game_close:
+            dis.fill(black)
+            message("You lost! Press 'c' to restart or 'q' to exit", red)
+            your_score(score)
+            pygame.display.update()
+            
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        game_over = True
+                        game_close = False
+                    if event.key == pygame.K_c:
+                        game_loop(asr_model)
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    game_over = True
+
+def your_score(score):
+    value = score_font.render("Your Score: " + str(score), True, blue)
+    dis.blit(value, [0, 0])
+
+def message(msg, color):
+    mesg = font_style.render(msg, True, color)
+    dis.blit(mesg, (dis_width / 6, dis_height / 3))
+
+def game_loop(asr_model):
+    game_over = False
+    game_close = False
+    paddle_width = 10
+    paddle_height = 60
+    paddle_speed = 40
+    paddle_x = 20
+    paddle_y = (dis_height - paddle_height) // 2
+    ball_size = 20
+    ball_speed_x = -90  # Move the ball towards the left
+    ball_speed_y = 40
+    ball_x = dis_width - ball_size - 20  # Start the ball from the right side
+    ball_y = dis_height // 2
+    score = 0
+
+    while not game_over:
+        text = asr_whisper(asr_model)
+
+        if 'up' in text:
+            paddle_y -= paddle_speed
+            print("Action taken: Move paddle up")
+        elif 'down' in text:
+            paddle_y += paddle_speed
+            print("Action taken: Move paddle down")
+
+        paddle_y = max(0, min(paddle_y, dis_height - paddle_height))
+
+        ball_x += ball_speed_x
+        ball_y += ball_speed_y
+
+        if ball_y <= 0 or ball_y >= dis_height - ball_size:
+            ball_speed_y = -ball_speed_y
+
+        if (ball_x < paddle_width + ball_size and
+            paddle_y < ball_y + ball_size // 2 < paddle_y + paddle_height):
+            ball_speed_x = abs(ball_speed_x)  # Reverse the ball's direction
+            ball_speed_y = ((ball_y + ball_size // 2 - paddle_y - paddle_height // 2) /
+                            (paddle_height // 2) * abs(ball_speed_x))
+        elif ball_x <= 0:
+            game_close = True
+        elif ball_x >= dis_width:
+            ball_speed_x = -ball_speed_x  # Reverse the ball's direction if it goes beyond the right edge
+
+        dis.fill(black)
+        pygame.draw.rect(dis, white, [paddle_x, paddle_y, paddle_width, paddle_height])
+        pygame.draw.rect(dis, white, [ball_x, ball_y, ball_size, ball_size])
+        your_score(score)
+        pygame.display.update()
+        clock.tick(120)
+
+    pygame.quit()
+
+if _name_ == '_main_':
+    pygame.init()
+    black = (0, 0, 0)
+    white = (255, 255, 255)
+    red = (213, 50, 80)
+    blue = (5, 125, 125)
+    dis_width = 800
+    dis_height = 600
+    dis = pygame.display.set_mode((dis_width, dis_height))
+    pygame.display.set_caption('Pong')
+    clock = pygame.time.Clock()
+    score_font = pygame.font.SysFont("calibri", 15, bold=pygame.font.Font.bold)
+    font_style = pygame.font.SysFont("calibri", 20, bold=pygame.font.Font.bold)
+    
+    print('Starting the game with Whisper')
+    model = whisper.load_model("base")
+    game_loop(model)
